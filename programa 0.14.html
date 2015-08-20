@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <title>Tiny Excel-like app in vanilla JS - jsFiddle demo</title>
+  
+  <script type='text/javascript' src='/js/lib/dummy.js'></script>
+  <script type='text/javascript' src='http://numericjs.com/lib/numeric-1.2.6.js'></script>
+ 
+  
+  
+  
+  <link rel="stylesheet" type="text/css" href="/css/result-light.css">
+  
+  <style type='text/css'>
+li {
+    list-style: none;
+}
+li:before {
+    content: "✓ ";
+}
+
+input {
+    border: none;
+    width: 80px;
+    font-size: 14px;
+    padding: 2px;
+}
+
+input:hover {
+    background-color: #eee;
+}
+
+input:focus {
+    background-color: #ccf;
+}
+
+input:not(:focus) {
+    text-align: right;
+}
+
+table {
+    border-collapse: collapse;  
+}
+
+td {
+    border: 1px solid #999;
+    padding: 0;
+}
+
+tr:first-child td, td:first-child {
+    background-color: #ccc;
+    padding: 1px 3px;
+    font-weight: bold;
+    text-align: center;
+}
+
+footer {
+    font-size: 80%;
+}
+
+textarea#consola {
+    width: 273px;
+}
+  </style>
+  
+
+
+<script type='text/javascript'>
+window.onload=function(){
+var columnas = 26;
+var filas = 27;
+for (var i=0; i<columnas; i++) { 
+    var row = document.querySelector("table").insertRow(-1);
+    for (var j=0; j<filas; j++) { 
+        var letter = String.fromCharCode("A".charCodeAt(0)+j-1);
+        row.insertCell(-1).innerHTML = i&&j ? "<input id='"+ letter+i +"' letra='"+ letter +"' numero='"+ i +"'/>" : i||letter;
+    }
+}
+for (var i=1; i<26; i++) {
+	for (var j=1; j<27; j++) {
+		var letter = String.fromCharCode("A".charCodeAt(0)+j-1);
+		document.getElementById(letter+i).letra = letter;
+		document.getElementById(letter+i).numero = i;
+	}
+}
+
+var DATA={}, INPUTS=[].slice.call(document.querySelectorAll("input"));
+INPUTS.forEach(function(elm) {
+    elm.onfocus = function(e) {
+        e.target.value = localStorage[e.target.id] || "";
+    };
+    elm.onblur = function(e) {
+        localStorage[e.target.id] = e.target.value;
+        computeAll();
+    };
+    var getter = function() {
+        var value = localStorage[elm.id] || "";
+        if (value.charAt(0) == "=") {
+            with (DATA) return eval(value.substring(1));
+        } else { return isNaN(parseFloat(value)) ? value : parseFloat(value); }
+    };
+    Object.defineProperty(DATA, elm.id, {get:getter});
+    Object.defineProperty(DATA, elm.id.toLowerCase(), {get:getter});
+});
+(window.computeAll = function() {
+    INPUTS.forEach(function(elm) { try { elm.value = DATA[elm.id]; } catch(e) {} });
+})();
+
+}
+
+</script>
+
+
+</head>
+<body>
+  <!--<p>Inspired by <a href="http://thomasstreet.net/blog/spreadsheet.html">http://thomasstreet.net/blog/spreadsheet.html</a>. Features:</p>
+
+<ul>
+    <li>Under 30 lines of vanilla JavaScript</li>
+    <li>Libraries used: <strong>http://numericjs.com/lib/numeric-1.2.6.js</li></strong></li>
+    <li>Excel-like syntax (formulas start with "=")</li>
+    <li>Support for arbitrary expressions (=A1+B2*C3)</li>
+    <li>Circular reference prevention</li>
+    <li>Automatic localStorage persistence</li>
+</ul>
+-->
+<table></table>
+
+<textarea id="consola" rows="4" cols="306" placeholder="Escriba aquí su operación. ">
+</textarea>
+<select id="opcion" onchange="opciones()"> <!--Añadir funciones nuevas a estas opciones-->
+  <option value="">--Elegir función--</option>  
+  <option value="guardarMatriz(,)">Guardar Matriz</option>
+  <option value="inversa()">Inversa</option>
+  <option value="transpuesta()">Transpuesta</option>
+  <option value="absoluto()">Absoluto</option>
+  <option value="determinante()">Determinante</option>
+  <option value="sumar(,)">Sumar</option>
+  <option value="restar(,)">Restar</option>
+  <option value="raiz()">Raiz</option>
+  <option value="resolver(,)">Resolver</option>
+  <option value="L()">LU -> L</option>
+  <option value="U()">LU -> U</option>
+</select>
+<button type="button" onclick="ejecutar()">			
+	Ejecutar						
+</button>
+<BR>
+<textarea id="disponer" rows="2" cols="15" placeholder="Escribir matriz a disponer. ">
+</textarea> 
+<button type="button" onclick="disponerauto()">			
+	Display						
+</button>
+<BR>
+
+<script>
+
+function guardarMatriz(Inicio, Final){		//De C5 a E7 ejemplo (3x3)
+	var LetraInicio = Inicio.letra.charCodeAt(0);
+	var LetraFinal = Final.letra.charCodeAt(0);
+	var NumeroInicio = Inicio.numero;
+	var NumeroFinal = Final.numero;
+	var Matriz = {value:new Array(LetraFinal-LetraInicio+1), posicionInicial:"          ", posicionFinal:"          "};
+	for (var i=0; i<(LetraFinal-LetraInicio+1); i++){
+		Matriz.value[i]= new Array(NumeroFinal-NumeroInicio+1);
+	}
+	var LI = 0;
+	var NI = 0;
+	for (var i=0; i<LetraFinal-LetraInicio+1; i++){
+		for (var j=0; j<NumeroFinal-NumeroInicio+1; j++){
+			LI=LetraInicio+i;
+			NI=NumeroInicio+j;
+			Matriz.value[i][j] = document.getElementById(String.fromCharCode(LI)+NI).value;
+			if (Matriz.value[i][j]==""){
+				Matriz.value[i][j]="0";
+			}
+		}
+	}
+	Matriz.posicionInicial=Inicio.id;
+	Matriz.posicionFinal=Final.id;
+	return Matriz;
+}
+
+function ejecutar(){
+	eval((document.getElementById('consola').value));
+	//lista();
+}
+
+function display(x){		
+	var temporal = 	(document.getElementById(x.posicionFinal).letra.charCodeAt(0)+2);
+	var CasillaInicial = String.fromCharCode(temporal)+document.getElementById(x.posicionInicial).numero;
+	var LetraCasillaInicial = String.fromCharCode(temporal);
+	
+	var LetraInicio = document.getElementById(x.posicionInicial).letra.charCodeAt(0);
+	var LetraFinal = document.getElementById(x.posicionFinal).letra.charCodeAt(0);
+	var NumeroInicio = document.getElementById(x.posicionInicial).numero;
+	var NumeroFinal = document.getElementById(x.posicionFinal).numero;
+	temporal = LetraFinal-LetraInicio;
+	var temporal2 = NumeroFinal-NumeroInicio;
+	var LetraCasillaFinal = LetraCasillaInicial.charCodeAt(0)+temporal;
+	
+	var NumeroCasillaFinal = document.getElementById(x.posicionFinal).numero;
+	
+	var CasillaFinal = String.fromCharCode(LetraCasillaFinal) + NumeroCasillaFinal;
+	
+	delete temporal, temporal2;
+	
+	//Algoritmo de mostrar en pantalla
+	var LI = 0;
+	var NI = 0;	
+	for (var i=0; i<LetraFinal-LetraInicio+1; i++){
+		for (var j=0; j<NumeroFinal-NumeroInicio+1; j++){
+			LI=document.getElementById(CasillaInicial).letra.charCodeAt(0)+i;
+			NI=document.getElementById(CasillaInicial).numero + j;
+			document.getElementById(String.fromCharCode(LI)+NI).value = x.value[i][j];
+			localStorage[document.getElementById(String.fromCharCode(LI)+NI).id] = x.value[i][j];
+		}
+	}
+
+}
+
+function inversa(x){
+	
+	var y = crearMatriz(x)
+	y.value = numeric.inv(x.value);
+	return y;
+}
+
+function transpuesta(x){
+
+	var y = crearMatriz(x)
+	y.value = numeric.transpose(x.value);
+	return y;
+
+}
+
+function absoluto(x){
+
+	var y = crearMatriz(x)
+	y.value = numeric.abs(x.value);
+	return y;
+}
+
+function determinante(x){		//El determinante sólo aparecerá como el primer valor de la matriz. El resto de valores aparecerá como 0
+	var y = crearMatriz(x);
+	var LetraInicio = document.getElementById(x.posicionInicial).letra.charCodeAt(0);
+	var LetraFinal = document.getElementById(x.posicionFinal).letra.charCodeAt(0);
+	var NumeroInicio = document.getElementById(x.posicionInicial).numero;
+	var NumeroFinal = document.getElementById(x.posicionFinal).numero;
+	var vector1 = new Array(NumeroFinal-NumeroInicio+1);
+	for (var i=0; i<NumeroFinal-NumeroInicio+1; i++){
+		if(i==0){
+			vector1[i] = numeric.det(x.value);
+		}
+		else{
+			vector1[i] = 0;
+		}
+	}
+	var vector2 = new Array(NumeroFinal-NumeroInicio+1);
+	for (var i=0; i<NumeroFinal-NumeroInicio+1; i++){
+			vector2[i] = 0;
+	}
+	for (var i=0; i<LetraFinal-LetraInicio+1; i++){
+		if (i==0){
+			y.value[i] = vector1;
+			}
+		else{
+			y.value[i] = vector2;
+			}
+	}
+	
+	return y;
+}
+
+function sumar(x,y){		//funcionamiento extraño
+
+	var z = crearMatriz(x);
+	z.value = numeric.add(x.value, y.value);
+	return z;
+}
+
+function restar(x,y){
+
+	var z = crearMatriz(x);
+	z.value = numeric.sub(x.value, y.value);
+	return z;
+}
+
+function raiz(x){
+
+	var y = crearMatriz(x);
+	y.value = numeric.sqrt(x.value);
+	return y;
+}
+
+function resolver(x,y){
+
+	var z = crearMatriz(x);
+	z.value = numeric.solve(x.value, y.value);
+	return z;
+	
+}
+
+function crearMatriz(x){
+
+	var LetraInicio = document.getElementById(x.posicionInicial).letra.charCodeAt(0);
+	var LetraFinal = document.getElementById(x.posicionFinal).letra.charCodeAt(0);
+	var NumeroInicio = document.getElementById(x.posicionInicial).numero;
+	var NumeroFinal = document.getElementById(x.posicionFinal).numero;
+	var z = {value:new Array(LetraFinal-LetraInicio+1), posicionInicial:"          ", posicionFinal:"          "};
+	z.posicionInicial = x.posicionInicial;
+	z.posicionFinal = x.posicionFinal;
+	return z;
+}
+
+function opciones(){
+    var x = document.getElementById("opcion").value;
+    document.getElementById("consola").value = x;	
+}
+
+function disponerauto(){
+	var primeraAa = document.getElementById('disponer').value;
+	var segundaAa = eval(primeraAa);
+	display(segundaAa);
+}
+
+function L(x){
+	var lu = numeric.cLU(x.value);
+	var L = crearMatriz(x);
+	L.value = lu.L;
+	return L;	
+}
+
+function U(x){
+	var lu = numeric.cLU(x.value);
+	var U = crearMatriz(x);
+	U.value = lu.U;
+	return U;
+}
+
+/*function lista(){
+	var x = Object.keys(window).length - 21;
+	if (x>0){
+		for(var i = 22; i <= Object.keys(window).length; i++){
+			document.getElementById("variables").innerHTML = Object.keys(window)[i];
+		}
+	}
+}
+*/
+
+</script> 
+
+<footer><p>&copy; 2013 <a href="http://ondras.zarovi.cz/">Ondrej ��ra</a></p></footer>
+  
+</body>
+
+<!--Tareas pendientes:
+	-Lista con las variables usadas
+	-Hacer doble click en una variable usada en la lista, te la dispone automáticamente
+	-Instrucciones de cada función disponible
+	-Más funciones
+	-Interface más elaborada, clara y estilizada
+	-
+	-...
+ -->
+
+</html>
+
+
